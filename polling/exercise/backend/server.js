@@ -22,7 +22,7 @@ app.use(express.static("frontend"));
 
 app.get("/poll", function (req, res) {
   res.json({
-    msg: getMsgs(),
+    // msg: getMsgs(),
   });
 });
 
