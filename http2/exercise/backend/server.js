@@ -34,11 +34,32 @@ const server = http2.createSecureServer({
  * Code goes here
  *
  */
+server.on("stream", (stream, headers) => {
+  // stream, headers -> array
+  const path = headers[":path"];
+  const method = headers[":method"];
+  // stream opens for every requests from the browser
+  if (path === "/msgs" && method === "GET") {
+    // immediately reply with 200 and ok encoding
+    console.log("connected a stream" + stream.id);
+    stream.respond({
+      ":status": 200,
+      "content-type": "text/plain: charset = utf-8",
+    });
 
+    // write the first response
+    stream.write(JSON.stringify({ msg: getMsgs() }));
+    connections.push(stream);
+    stream.on("close", () => {
+      console.log("disconnected" + stream.id);
+      connections = connections.filter((s) => s !== stream);
+    });
+  }
+});
 server.on("request", async (req, res) => {
   const path = req.headers[":path"];
   const method = req.headers[":method"];
-
+  // handling the static files when route is not related to msgs
   if (path !== "/msgs") {
     // handle the static assets
     return handler(req, res, {
@@ -53,11 +74,16 @@ server.on("request", async (req, res) => {
     const data = Buffer.concat(buffers).toString();
     const { user, text } = JSON.parse(data);
 
-    /*
-     *
-     * some code goes here
-     *
-     */
+    msg.push({
+      user,
+      text,
+      time: Date.now(),
+    });
+    res.end();
+
+    connections.forEach((stream) => {
+      stream.write(JSON.stringify({ msg: getMsgs() }));
+    });
   }
 });
 
